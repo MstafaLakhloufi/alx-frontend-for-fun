@@ -1,98 +1,199 @@
 #!/usr/bin/python3
-''' Write a script markdown2html.py that takes an argument 2 strings:
+""" 
+Write a script markdown2html.py that takes an argument 2 strings:
+First argument is the name of the Markdown file
+Second argument is the output file name 
+"""
 
-    First argument is the name of the Markdown file
-    Second argument is the output file name
-'''
-
-import sys
-import os.path
-import re
-import hashlib
 
 if __name__ == '__main__':
+    """
+    Write a script markdown2html.py that takes an argument 2 strings:
+    First argument is the name of the Markdown file
+    Second argument is the output file name
+    """
+
+    import sys
+    import os.path
+    import hashlib
+
+    def parse():
+        """ dashBool at 0 represents that no ul list is open"""
+        dashBool = 0
+        odashBool = 0
+        pdashBool = 0
+
+        f = open(sys.argv[1], "r")
+        for line in f:
+            line = midlineparse(line)
+            """ 
+            if a list has been opened, dash bool is 1
+            if the next line isnt a list item, dashbool remains at 2
+            if it is it gets set to 1 again
+            """
+            if (dashBool == 1):
+                dashBool = 2
+            if (odashBool == 1):
+                odashBool = 2
+            if (pdashBool == 1):
+                pdashBool = 2
+
+            """ line that will be returned """
+            finalLine = line
+
+            if line[0] == "#":
+                finalLine = mark2header(line)
+            elif line[0] == "-":
+                finalLine = mark2list(line, dashBool)
+                dashBool = 1
+            elif line[0] == "*":
+                finalLine = mark2olist(line, odashBool)
+                odashBool = 1
+            elif line[0] != "" and line[0] != " " and line[0] != "\n":
+                finalLine = mark2par(line, pdashBool)
+                pdashBool = 1
+
+            if os.path.isfile(sys.argv[2]) == False:
+                x = open(sys.argv[2], "x")
+                x.close
+
+            w = open(sys.argv[2], "a")
+
+            if (dashBool == 2):
+                w.write("</ul>\n")
+                dashBool = 0
+            if (odashBool == 2):
+                w.write("</ol>\n")
+                odashBool = 0
+            if (pdashBool == 2):
+                w.write("</p>\n")
+                pdashBool = 0
+            w.write("{}\n".format(finalLine))
+            w.close()
+
+        w = open(sys.argv[2], "a")
+        if (dashBool == 1):
+            w.write("</ul>\n")
+            dashBool = 0
+        if (odashBool == 1):
+            w.write("</ol>\n")
+            odashBool = 0
+        if (pdashBool == 1):
+            w.write("</p>\n")
+            pdashBool = 0
+        w.close()
+        f.close()
+
+    def mark2header(line):
+        """ translates # to <h1> """
+        count = 0
+        for char in line:
+            if char == "#":
+                count += 1
+                continue
+            elif char == " ":
+                head = "<h{}>".format(count)
+                tail = "</h{}>".format(count)
+                finalLine = "{}{}{}".format(head, line[(count+1):].rstrip(), tail)
+                return (finalLine)
+                break
+            else:
+                break
+
+    def mark2list(line, dashbool):
+        """ translates - to <ul> """
+        if (dashbool == 0):
+            head = "<ul>\n"
+        else:
+            head = ""
+        body = "<li>{}</li>".format(line[2:].rstrip())
+        return "{}{}".format(head, body)
+
+    def mark2olist(line, dashbool):
+        """ translates * to <ol> """
+        if (dashbool == 0):
+            head = "<ol>\n"
+        else:
+            head = ""
+        body = "<li>{}</li>".format(line[2:].rstrip())
+        return "{}{}".format(head, body)
+
+    def mark2par(line, dashbool):
+        """ translates regular text to <p> and <br/> """
+        templine = []
+        if (dashbool == 0):
+            head = "<p>\n"
+        elif (dashbool == 2):
+            head = "<br />\n"
+        else:
+            head = ""
+        body = "{}".format(line.rstrip())
+        return "{}{}".format(head, body)
+
+    def midlineparse(line):
+        """ parses bold and other thing mid line """
+
+        """ bold """
+        tokens = line.split('**')
+        for i in range(len(tokens)):
+            if (i % 2 != 0 and tokens[i+1] != ''):
+                tokens[i] = "<b>{}</b>".format(tokens[i])
+        nuline = "{}".format(''.join(tokens))
+
+        """ em """
+        _tokens = nuline.split('__')
+        for j in range(len(_tokens)):
+            if (j % 2 != 0 and _tokens[j+1] != ''):
+                _tokens[j] = "<em>{}</em>".format(_tokens[j])
+        nuline = "{}".format(''.join(_tokens))
+
+        """ md5 """
+        square_substring = []
+        square_tokens_temp = []
+        square_tokens = nuline.split('[[')
+
+        for sub in square_tokens:
+            square_tokens_temp.extend(sub.split("]]"))
+        for ki in square_tokens[1:]:
+            square_tokens_s = ki.split(']]')
+            if len(square_tokens_s) > 1:
+                square_substring.append(square_tokens_s[0])
+
+        for kj in square_substring:
+            pos = square_tokens_temp.index(kj)
+            encoded = hashlib.md5(square_tokens_temp[pos].encode())
+            square_tokens_temp[pos] = "{}".format(encoded.hexdigest())
+        nuline = "{}".format(''.join(square_tokens_temp))
+
+        """ lowercase """
+        bracket_substring = []
+        bracket_tokens_temp = []
+        bracket_tokens = nuline.split('((')
+
+        for sub in bracket_tokens:
+            bracket_tokens_temp.extend(sub.split("))"))
+        for li in bracket_tokens[1:]:
+            bracket_tokens_s = li.split('))')
+            if len(bracket_tokens_s) > 1:
+                bracket_substring.append(bracket_tokens_s[0])
+
+        for lj in bracket_substring:
+            pos = bracket_tokens_temp.index(lj)
+            ret = lj.replace('c', '').replace('C', '')
+            bracket_tokens_temp[pos] = "{}".format(ret)
+
+        nuline = "{}".format(''.join(bracket_tokens_temp))
+        return nuline
+
+
+    """ function that converts markdown to html """
     if len(sys.argv) < 3:
-        print('Usage: ./markdown2html.py README.md README.html',
-              file=sys.stderr)
+        print("Usage: ./markdown2html.py README.md README.html", file=sys.stderr)
         exit(1)
 
-    if not os.path.isfile(sys.argv[1]):
-        print('Missing {}'.format(sys.argv[1]), file=sys.stderr)
+    if os.path.isfile(sys.argv[1]) == False:
+        print("Missing {}".format(sys.argv[1]), file=sys.stderr)
         exit(1)
 
-    with open(sys.argv[1]) as read:
-        with open(sys.argv[2], 'w') as html:
-            unordered_start, ordered_start, paragraph = False, False, False
-            # bold syntax
-            for line in read:
-                line = line.replace('**', '<b>', 1)
-                line = line.replace('**', '</b>', 1)
-                line = line.replace('__', '<em>', 1)
-                line = line.replace('__', '</em>', 1)
-
-                # md5
-                md5 = re.findall(r'\[\[.+?\]\]', line)
-                md5_inside = re.findall(r'\[\[(.+?)\]\]', line)
-                if md5:
-                    line = line.replace(md5[0], hashlib.md5(
-                        md5_inside[0].encode()).hexdigest())
-
-                # remove the letter C
-                remove_letter_c = re.findall(r'\(\(.+?\)\)', line)
-                remove_c_more = re.findall(r'\(\((.+?)\)\)', line)
-                if remove_letter_c:
-                    remove_c_more = ''.join(
-                        c for c in remove_c_more[0] if c not in 'Cc')
-                    line = line.replace(remove_letter_c[0], remove_c_more)
-
-                length = len(line)
-                headings = line.lstrip('#')
-                heading_num = length - len(headings)
-                unordered = line.lstrip('-')
-                unordered_num = length - len(unordered)
-                ordered = line.lstrip('*')
-                ordered_num = length - len(ordered)
-                # headings, lists
-                if 1 <= heading_num <= 6:
-                    line = '<h{}>'.format(
-                        heading_num) + headings.strip() + '</h{}>\n'.format(
-                        heading_num)
-
-                if unordered_num:
-                    if not unordered_start:
-                        html.write('<ul>\n')
-                        unordered_start = True
-                    line = '<li>' + unordered.strip() + '</li>\n'
-                if unordered_start and not unordered_num:
-                    html.write('</ul>\n')
-                    unordered_start = False
-
-                if ordered_num:
-                    if not ordered_start:
-                        html.write('<ol>\n')
-                        ordered_start = True
-                    line = '<li>' + ordered.strip() + '</li>\n'
-                if ordered_start and not ordered_num:
-                    html.write('</ol>\n')
-                    ordered_start = False
-
-                if not (heading_num or unordered_start or ordered_start):
-                    if not paragraph and length > 1:
-                        html.write('<p>\n')
-                        paragraph = True
-                    elif length > 1:
-                        html.write('<br/>\n')
-                    elif paragraph:
-                        html.write('</p>\n')
-                        paragraph = False
-
-                if length > 1:
-                    html.write(line)
-
-            if unordered_start:
-                html.write('</ul>\n')
-            if ordered_start:
-                html.write('</ol>\n')
-            if paragraph:
-                html.write('</p>\n')
-    exit (0)
+    parse()
+    exit(0)
