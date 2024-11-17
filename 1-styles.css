@@ -1,0 +1,28 @@
+h2 {
+    font-size: 2rem;
+    font-weight: 900;
+    padding: 5px;
+} 
+h2 a {
+  color: #8b163b;
+  text-decoration: none;
+  position: relative;
+  font-size: 2rem;
+  font-weight: 900;
+}
+
+h2 a::before {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  width: 0;
+  height: 0.2rem;
+  background-color: rgb(154, 37, 37);
+  transition: 1.5s cubic-bezier(0.17, 0.67, 0, 1.01);
+}
+
+a:hover::before {
+  left: 0;
+  background-color: #8a153a;
+  width: 100%;
+}
